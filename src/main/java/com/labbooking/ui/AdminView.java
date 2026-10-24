@@ -1,0 +1,263 @@
+package com.labbooking.ui;
+
+import com.labbooking.Main;
+import com.labbooking.dao.BookingDao;
+import com.labbooking.dao.InventoryDao;
+import com.labbooking.model.BookingItem;
+import com.labbooking.model.BookingRequest;
+import com.labbooking.model.EquipmentUnit;
+import com.labbooking.model.Material;
+
+import javafx.geometry.Insets;
+import javafx.scene.control.Button;
+import javafx.scene.control.ComboBox;
+import javafx.scene.control.Label;
+import javafx.scene.control.SelectionMode;
+import javafx.scene.control.Tab;
+import javafx.scene.control.TabPane;
+import javafx.scene.control.TableView;
+import javafx.scene.control.TextField;
+import javafx.scene.layout.HBox;
+import javafx.scene.layout.Priority;
+import javafx.scene.layout.VBox;
+
+import java.sql.SQLException;
+import java.util.HashSet;
+import java.util.Set;
+
+import static com.labbooking.ui.StudentView.col;
+
+// অ্যাডমিনের পুরো স্ক্রিন: রিকোয়েস্ট দেখা → approve/reject → issue → return,
+// আর আলাদা ট্যাবে ইনভেন্টরি (নতুন যন্ত্র যোগ, সারানো যন্ত্র আবার চালু)।
+// StudentView এর মতোই এক TabPane, FXML ছাড়া।
+public class AdminView extends VBox {
+
+    private final BookingDao bookings = new BookingDao();
+    private final InventoryDao inventory = new InventoryDao();
+
+    // তিন অবস্থা = কাজের তিন ধাপ; আলাদা তিন ট্যাব বানালে একই টেবিল তিনবার লিখতে হতো।
+    private final ComboBox<String> status = new ComboBox<>();
+    private final TableView<BookingRequest> requests = new TableView<>();
+    private final TableView<BookingItem> items = new TableView<>();
+    private final TableView<EquipmentUnit> heldUnits = new TableView<>();
+
+    private final TableView<EquipmentUnit> allUnits = new TableView<>();
+    private final ComboBox<Material> material = new ComboBox<>();
+    private final TextField serialNo = new TextField();
+
+    private final Label message = new Label();
+
+    // SQLException ছুঁড়তে পারে এমন কাজ — তাই Runnable দিয়ে হয় না।
+    private interface Action {
+        void run() throws SQLException;
+    }
+
+    public AdminView() {
+        message.setWrapText(true);
+
+        status.getItems().addAll("PENDING", "APPROVED", "ISSUED");
+        status.setValue("PENDING");
+        status.setOnAction(e -> refresh());
+
+        col(requests, "Request code", 150, BookingRequest::getRequestCode);
+        col(requests, "Student", 160, BookingRequest::getStudentName);
+        col(requests, "Purpose", 220, BookingRequest::getPurpose);
+        col(requests, "Return date", 110, r -> String.valueOf(r.getReturnDate()));
+        col(requests, "Status", 100, BookingRequest::getStatus);
+        requests.setPlaceholder(new Label("No requests in this state"));
+        // উপরে রিকোয়েস্ট বাছা হলে নিচের দুই টেবিল নিজেই ভরে যায়।
+        requests.getSelectionModel().selectedItemProperty().addListener((obs, old, r) -> loadDetails(r));
+
+        col(items, "Material", 300, BookingItem::getMaterialName);
+        col(items, "Quantity", 90, i -> String.valueOf(i.getQuantity()));
+        col(items, "Status", 110, BookingItem::getStatus);
+        items.setPlaceholder(new Label("Select a request above"));
+
+        col(heldUnits, "Material", 260, EquipmentUnit::getMaterialName);
+        col(heldUnits, "Serial", 140, EquipmentUnit::getSerialNo);
+        col(heldUnits, "Status", 110, EquipmentUnit::getStatus);
+        heldUnits.setPlaceholder(new Label("No units held by this request"));
+        // নষ্ট ইউনিটগুলো শুধু বেছে নিলেই হয় — প্রতি লাইনে চেকবক্স বসাতে
+        // আলাদা cell factory লিখতে হতো, ফল একই।
+        heldUnits.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+
+        Button approveItem = new Button("Approve item");
+        approveItem.setOnAction(e -> decideItem(true));
+        Button rejectItem = new Button("Reject item");
+        rejectItem.setOnAction(e -> decideItem(false));
+
+        Button approveAll = new Button("Approve whole request");
+        approveAll.setOnAction(e -> decideRequest(true));
+        Button rejectAll = new Button("Reject whole request");
+        rejectAll.setOnAction(e -> decideRequest(false));
+
+        Button issue = new Button("Record issue");
+        issue.setOnAction(e -> {
+            BookingRequest r = selectedRequest("APPROVED");
+            if (r != null) act("Issued " + r.getRequestCode(), () -> bookings.recordIssue(r.getId()));
+        });
+
+        Button recordReturn = new Button("Record return");
+        recordReturn.setOnAction(e -> {
+            BookingRequest r = selectedRequest("ISSUED");
+            if (r == null) return;
+            Set<Integer> damaged = new HashSet<>();
+            for (EquipmentUnit u : heldUnits.getSelectionModel().getSelectedItems()) damaged.add(u.getId());
+            // বাছা না হওয়া বাকি ইউনিটগুলো DAO নিজেই AVAILABLE করে দেয়।
+            act("Returned " + r.getRequestCode() + " (" + damaged.size() + " damaged)",
+                    () -> bookings.recordReturn(r.getId(), damaged));
+        });
+
+        VBox requestTab = new VBox(8,
+                new HBox(8, new Label("Show requests with status"), status),
+                requests,
+                new Label("Items in the selected request"),
+                items,
+                new HBox(8, approveItem, rejectItem, approveAll, rejectAll),
+                new Label("Units held by this request — select the damaged ones before recording a return"),
+                heldUnits,
+                new HBox(8, issue, recordReturn));
+        requestTab.setPadding(new Insets(12));
+        VBox.setVgrow(requests, Priority.ALWAYS);
+
+        col(allUnits, "Material", 260, EquipmentUnit::getMaterialName);
+        col(allUnits, "Serial", 140, EquipmentUnit::getSerialNo);
+        col(allUnits, "Status", 110, EquipmentUnit::getStatus);
+        allUnits.setPlaceholder(new Label("No equipment units yet"));
+
+        Button add = new Button("Add unit");
+        add.setOnAction(e -> {
+            Material m = material.getValue();
+            if (m == null) {
+                message.setText("Choose a material first");
+                return;
+            }
+            // একই সিরিয়াল আগে থাকলে DAO পড়ার মতো মেসেজ দিয়ে ঠেকায়।
+            act("Added " + m + " / " + serialNo.getText().trim(), () -> {
+                inventory.addUnit(m.getId(), serialNo.getText());
+                serialNo.clear();
+            });
+        });
+
+        Button repaired = new Button("Mark selected unit repaired");
+        repaired.setOnAction(e -> {
+            EquipmentUnit u = allUnits.getSelectionModel().getSelectedItem();
+            if (u == null || !u.getStatus().equals("DAMAGED")) {
+                message.setText("Select a DAMAGED unit to mark it repaired");
+                return;
+            }
+            act("Unit " + u.getSerialNo() + " is available again",
+                    () -> inventory.setUnitStatus(u.getId(), "AVAILABLE"));
+        });
+
+        VBox inventoryTab = new VBox(8,
+                new Label("All equipment units"),
+                allUnits,
+                repaired,
+                new HBox(8, new Label("Material"), material, new Label("Serial number"), serialNo, add));
+        inventoryTab.setPadding(new Insets(12));
+        VBox.setVgrow(allUnits, Priority.ALWAYS);
+
+        Tab requestsTabPage = new Tab("Requests", requestTab);
+        Tab inventoryTabPage = new Tab("Inventory", inventoryTab);
+        TabPane tabs = new TabPane(requestsTabPage, inventoryTabPage);
+        tabs.setTabClosingPolicy(TabPane.TabClosingPolicy.UNAVAILABLE);
+
+        Button logout = new Button("Logout");
+        logout.setOnAction(e -> Main.logout());
+        HBox header = new HBox(12,
+                new Label(Main.currentUser.getFullName() + "  (" + Main.currentUser.getRole() + ")"),
+                logout);
+        header.setPadding(new Insets(12, 12, 0, 12));
+
+        setSpacing(8);
+        getChildren().addAll(header, tabs, message);
+        VBox.setVgrow(tabs, Priority.ALWAYS);
+        VBox.setMargin(message, new Insets(0, 12, 12, 12));
+
+        refresh();
+    }
+
+    // একটা লাইন approve/reject। লাইনের সিদ্ধান্ত থেকেই রিকোয়েস্টের স্ট্যাটাস হিসাব হয়।
+    private void decideItem(boolean approve) {
+        BookingRequest r = selectedRequest("PENDING");
+        if (r == null) return;
+        BookingItem item = items.getSelectionModel().getSelectedItem();
+        if (item == null) {
+            message.setText("Select an item line first");
+            return;
+        }
+        act((approve ? "Approved " : "Rejected ") + item.getMaterialName(),
+                () -> bookings.decideItem(item.getId(), approve));
+    }
+
+    private void decideRequest(boolean approve) {
+        BookingRequest r = selectedRequest("PENDING");
+        if (r == null) return;
+        act((approve ? "Approved " : "Rejected ") + r.getRequestCode(),
+                () -> bookings.decideRequest(r.getId(), approve));
+    }
+
+    // DAO স্ট্যাটাস হাতে ধরে বসায়, তাই ভুল অবস্থার রিকোয়েস্টে বাটন চাপলে
+    // ভুল স্ট্যাটাস পাকা হয়ে যেত — তার আগেই এখানে আটকানো হয়।
+    private BookingRequest selectedRequest(String needStatus) {
+        BookingRequest r = requests.getSelectionModel().getSelectedItem();
+        if (r == null) {
+            message.setText("Select a request first");
+            return null;
+        }
+        if (!r.getStatus().equals(needStatus)) {
+            message.setText("That request is " + r.getStatus() + "; this action needs " + needStatus);
+            return null;
+        }
+        return r;
+    }
+
+    // সব বাটনের একই মোড়ক: চালাও, মেসেজ দেখাও, পর্দা নতুন করে পড়ো।
+    private void act(String okMessage, Action action) {
+        try {
+            action.run();
+            message.setText(okMessage);
+            refresh();
+        } catch (IllegalArgumentException | IllegalStateException ex) {
+            message.setText(ex.getMessage());
+        } catch (SQLException ex) {
+            message.setText("Database error: " + ex.getMessage());
+        }
+    }
+
+    // একটা কাজের পর রিকোয়েস্টের স্ট্যাটাস আর ইউনিটের অবস্থা দুটোই বদলায়,
+    // তাই পুরো স্ক্রিনই আবার পড়া হয় — কোয়েরিগুলো ছোট, বাসি তথ্য থাকার ঝুঁকি নেই।
+    private void refresh() {
+        BookingRequest selected = requests.getSelectionModel().getSelectedItem();
+        try {
+            requests.getItems().setAll(bookings.listByStatus(status.getValue()));
+            allUnits.getItems().setAll(inventory.listUnits());
+            material.getItems().setAll(inventory.listMaterials(null));
+        } catch (SQLException ex) {
+            message.setText("Database error: " + ex.getMessage());
+            return;
+        }
+        // আগের রিকোয়েস্ট এখনো তালিকায় থাকলে আবার বেছে দেওয়া হয়, নাহলে
+        // প্রতিটা আইটেম approve করার পর অ্যাডমিনকে আবার সেটা খুঁজতে হতো।
+        if (selected == null) return;
+        for (BookingRequest r : requests.getItems()) {
+            if (r.getId() == selected.getId()) {
+                requests.getSelectionModel().select(r);
+                return;
+            }
+        }
+    }
+
+    private void loadDetails(BookingRequest request) {
+        items.getItems().clear();
+        heldUnits.getItems().clear();
+        if (request == null) return;
+        try {
+            items.getItems().setAll(bookings.listItems(request.getId()));
+            heldUnits.getItems().setAll(bookings.listUnitsForRequest(request.getId()));
+        } catch (SQLException ex) {
+            message.setText("Database error: " + ex.getMessage());
+        }
+    }
+}

@@ -54,33 +54,29 @@ public class StudentView extends VBox {
     public StudentView() {
         message.setWrapText(true);
 
-        stock.getColumns().addAll(
-                col("Subject", 140, Material::getSubject),
-                col("Material", 200, Material::getName),
-                col("Variant", 160, Material::getVariant),
-                // ০ হলেও একই লেখা — README এর "0 available" শর্ত এখানেই পূরণ হয়।
-                col("Availability", 110, m -> m.getAvailableCount() + " available"));
+        col(stock, "Subject", 140, Material::getSubject);
+        col(stock, "Material", 200, Material::getName);
+        col(stock, "Variant", 160, Material::getVariant);
+        // ০ হলেও একই লেখা — README এর "0 available" শর্ত এখানেই পূরণ হয়।
+        col(stock, "Availability", 110, m -> m.getAvailableCount() + " available");
         stock.setPlaceholder(new Label("No materials for this subject"));
 
         cartTable.setItems(cart);
-        cartTable.getColumns().addAll(
-                col("Material", 300, BookingItem::getMaterialName),
-                col("Quantity", 90, i -> String.valueOf(i.getQuantity())));
+        col(cartTable, "Material", 300, BookingItem::getMaterialName);
+        col(cartTable, "Quantity", 90, i -> String.valueOf(i.getQuantity()));
         cartTable.setPlaceholder(new Label("Request list is empty"));
 
-        myRequests.getColumns().addAll(
-                col("Request code", 160, BookingRequest::getRequestCode),
-                col("Purpose", 240, BookingRequest::getPurpose),
-                col("Return date", 110, r -> String.valueOf(r.getReturnDate())),
-                col("Status", 100, BookingRequest::getStatus));
+        col(myRequests, "Request code", 160, BookingRequest::getRequestCode);
+        col(myRequests, "Purpose", 240, BookingRequest::getPurpose);
+        col(myRequests, "Return date", 110, r -> String.valueOf(r.getReturnDate()));
+        col(myRequests, "Status", 100, BookingRequest::getStatus);
         myRequests.setPlaceholder(new Label("No requests yet"));
         // উপরে কোন রিকোয়েস্ট বাছা হলো, নিচে তার আইটেমগুলো।
         myRequests.getSelectionModel().selectedItemProperty().addListener((obs, old, selected) -> loadItems(selected));
 
-        myItems.getColumns().addAll(
-                col("Material", 300, BookingItem::getMaterialName),
-                col("Quantity", 90, i -> String.valueOf(i.getQuantity())),
-                col("Status", 110, BookingItem::getStatus));
+        col(myItems, "Material", 300, BookingItem::getMaterialName);
+        col(myItems, "Quantity", 90, i -> String.valueOf(i.getQuantity()));
+        col(myItems, "Status", 110, BookingItem::getStatus);
         myItems.setPlaceholder(new Label("Select a request above"));
 
         // সাবজেক্ট বদলানো = নতুন কাজ শুরু, তাই কার্ট খালি হয় (README এর নিয়ম)।
@@ -150,12 +146,15 @@ public class StudentView extends VBox {
         loadStock(null, true);
     }
 
-    // চার জায়গায় একই তিন লাইন লিখতে হয় না — কলামের শিরোনাম আর কোন লেখা দেখাবে, ব্যস।
-    private static <T> TableColumn<T, String> col(String title, double width, Function<T, String> value) {
+    // চার জায়গায় একই তিন লাইন লিখতে হয় না — কোন টেবিলে, কী শিরোনাম, কোন লেখা, ব্যস।
+    // কলামটা নিজেই টেবিলে বসায়: addAll(col(...), col(...)) লিখলে জাভা varargs এর জন্য
+    // জেনেরিক অ্যারে বানাতে বাধ্য হয় আর "type safety" ওয়ার্নিং দেয়।
+    // private নয়, কারণ AdminView এর টেবিলগুলোও এটাই ব্যবহার করে (static import)।
+    static <T> void col(TableView<T> table, String title, double width, Function<T, String> value) {
         TableColumn<T, String> c = new TableColumn<>(title);
         c.setPrefWidth(width);
         c.setCellValueFactory(row -> new SimpleStringProperty(value.apply(row.getValue())));
-        return c;
+        table.getColumns().add(c);
     }
 
     // subjectFilter null দিলে পুরো ল্যাবের স্টক।

@@ -1,16 +1,13 @@
 package com.labbooking;
 
 import com.labbooking.model.User;
+import com.labbooking.ui.AdminView;
 import com.labbooking.ui.LoginView;
 import com.labbooking.ui.StudentView;
 
 import javafx.application.Application;
-import javafx.geometry.Insets;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
-import javafx.scene.control.Button;
-import javafx.scene.control.Label;
-import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 
 // JavaFX অ্যাপ বানাতে হলে Application ক্লাস extend করতে হয়।
@@ -50,17 +47,9 @@ public class Main extends Application {
         show(new LoginView());
     }
 
-    // ছাত্রের স্ক্রিন তৈরি; অ্যাডমিনের আসল স্ক্রিন Phase 6 এ এই প্লেসহোল্ডারের জায়গায় বসবে।
+    // role অনুযায়ী স্ক্রিন — দুইটাই নিজের ভেতরে হেডার আর Logout রাখে।
     private static Parent home(User user) {
-        if (!user.isAdmin()) return new StudentView();
-        Button logout = new Button("Logout");
-        logout.setOnAction(e -> logout());
-        VBox box = new VBox(12,
-                new Label(user.getFullName() + "  (" + user.getRole() + ")"),
-                new Label("Admin screens: pending requests, issue, return, inventory (Phase 6)."),
-                logout);
-        box.setPadding(new Insets(24));
-        return box;
+        return user.isAdmin() ? new AdminView() : new StudentView();
     }
 
     public static void main(String[] args) {

@@ -133,8 +133,10 @@ public class BookingDao {
         return listRequests("WHERE r.student_id = ?", studentId);
     }
 
-    public List<BookingRequest> listPending() throws SQLException {
-        return listRequests("WHERE r.status = 'PENDING'", null);
+    // অ্যাডমিনের স্ক্রিন তিন অবস্থার তালিকা চায়: PENDING (সিদ্ধান্ত),
+    // APPROVED (হাতে দেওয়া), ISSUED (ফেরত নেওয়া) — তাই একটাই মেথড।
+    public List<BookingRequest> listByStatus(String status) throws SQLException {
+        return listRequests("WHERE r.status = ?", status);
     }
 
     public List<BookingItem> listItems(int requestId) throws SQLException {
@@ -328,7 +330,7 @@ public class BookingDao {
 
     // দুইটা তালিকার কোয়েরি একই, শুধু WHERE আলাদা। where টা কোডে লেখা ধ্রুব স্ট্রিং,
     // ইউজারের ইনপুট নয় — তাই injection এর ঝুঁকি নেই; মান সবসময় ? দিয়েই যায়।
-    private List<BookingRequest> listRequests(String where, Integer param) throws SQLException {
+    private List<BookingRequest> listRequests(String where, Object param) throws SQLException {
         String sql = """
                 SELECT r.id, r.request_code, r.student_id, u.full_name, r.purpose,
                        r.return_date, r.status, r.created_at
@@ -338,7 +340,7 @@ public class BookingDao {
         List<BookingRequest> out = new ArrayList<>();
         try (Connection c = Database.getConnection();
              PreparedStatement ps = c.prepareStatement(sql)) {
-            if (param != null) ps.setInt(1, param);
+            if (param != null) ps.setObject(1, param);
             try (ResultSet rs = ps.executeQuery()) {
                 while (rs.next()) {
                     out.add(new BookingRequest(rs.getInt("id"), rs.getString("request_code"),
