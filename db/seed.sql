@@ -7,7 +7,7 @@ USE lab_booking;
 -- হ্যাশ ফরম্যাট: saltHex$sha256Hex(saltHex + password) — Phase 3 এর কোড এভাবেই মেলাবে।
 INSERT INTO users (full_name, email, password_hash, role) VALUES
   ('Lab Administrator', 'admin@lab.edu',  'a1b2c3d4e5f60718$b90f4bebd6a802058aa94ae1342fa683358e42caa59b78f1c1fbbe854ff18c07', 'ADMIN'),
-  ('Shahariar Kabir',   'kabir@lab.edu',  '0f1e2d3c4b5a6978$431e12094b57b10756044f6b51a2a72fd32e9e4aef59ca3a5739c24d200fe271', 'STUDENT'),
+  ('Al-Shahariar ',   'shahariar@lab.edu',  '0f1e2d3c4b5a6978$431e12094b57b10756044f6b51a2a72fd32e9e4aef59ca3a5739c24d200fe271', 'STUDENT'),
   ('Nusrat Jahan',      'nusrat@lab.edu', '1122334455667788$007b6e73fb8356defe2704fb3dff1766f82838c89594d7e7d215bd068fe49cdd', 'STUDENT');
 
 -- দুইটা সাবজেক্টে ছয়টা ক্যাটালগ এন্ট্রি।
