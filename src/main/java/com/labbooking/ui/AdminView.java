@@ -8,6 +8,7 @@ import com.labbooking.model.BookingRequest;
 import com.labbooking.model.EquipmentUnit;
 import com.labbooking.model.Material;
 
+import javafx.beans.property.SimpleStringProperty;
 import javafx.geometry.Insets;
 import javafx.scene.control.Button;
 import javafx.scene.control.ComboBox;
@@ -17,6 +18,9 @@ import javafx.scene.control.Tab;
 import javafx.scene.control.TabPane;
 import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
+import javafx.scene.control.TreeItem;
+import javafx.scene.control.TreeTableColumn;
+import javafx.scene.control.TreeTableView;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.Region;
@@ -24,7 +28,9 @@ import javafx.scene.layout.VBox;
 
 import java.sql.SQLException;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
 import static com.labbooking.ui.StudentView.col;
 
@@ -42,7 +48,9 @@ public class AdminView extends VBox {
     private final TableView<BookingItem> items = new TableView<>();
     private final TableView<EquipmentUnit> heldUnits = new TableView<>();
 
-    private final TableView<EquipmentUnit> allUnits = new TableView<>();
+    // এক টেবিলেই দুই রকম সারি: material (মোট কয়টা খালি) খুললে তার ইউনিটগুলো।
+    // তাই টাইপ Object — প্রতিটা কলাম সারি দেখে ঠিক করে কী লিখবে।
+    private final TreeTableView<Object> stock = new TreeTableView<>();
     private final ComboBox<Material> material = new ComboBox<>();
     private final TextField serialNo = new TextField();
 
@@ -121,10 +129,17 @@ public class AdminView extends VBox {
         requestTab.setPadding(new Insets(12));
         VBox.setVgrow(requests, Priority.ALWAYS);
 
-        col(allUnits, "Material", 260, EquipmentUnit::getMaterialName);
-        col(allUnits, "Serial", 140, EquipmentUnit::getSerialNo);
-        col(allUnits, "Status", 110, EquipmentUnit::getStatus);
-        allUnits.setPlaceholder(new Label("No equipment units yet"));
+        // listMaterials(null) এমনিতেই AVAILABLE গোনে (ড্রপডাউন ভরতে পড়াই হয়),
+        // তাই এই সারসংক্ষেপে নতুন কোনো কোয়েরি লাগছে না।
+        treeCol("Material", 340,
+                m -> m.getSubject() + " — " + m, EquipmentUnit::getMaterialName);
+        treeCol("Serial", 140, m -> "", EquipmentUnit::getSerialNo);
+        // material সারিতে "কয়টা খালি", ইউনিট সারিতে সেই যন্ত্রের নিজের অবস্থা।
+        treeCol("Available / Status", 160,
+                m -> m.getAvailableCount() + " available", EquipmentUnit::getStatus);
+        stock.setShowRoot(false);
+        stock.setRoot(new TreeItem<>());
+        stock.setPlaceholder(new Label("No materials yet"));
 
         Button add = new Button("Add unit");
         add.setOnAction(e -> {
@@ -142,7 +157,9 @@ public class AdminView extends VBox {
 
         Button repaired = new Button("Mark selected unit repaired");
         repaired.setOnAction(e -> {
-            EquipmentUnit u = allUnits.getSelectionModel().getSelectedItem();
+            TreeItem<Object> row = stock.getSelectionModel().getSelectedItem();
+            // material সারি বেছে নিলে row.getValue() EquipmentUnit নয় — তখন u null।
+            EquipmentUnit u = row != null && row.getValue() instanceof EquipmentUnit unit ? unit : null;
             if (u == null || !u.getStatus().equals("DAMAGED")) {
                 error("Select a DAMAGED unit to mark it repaired");
                 return;
@@ -152,12 +169,12 @@ public class AdminView extends VBox {
         });
 
         VBox inventoryTab = new VBox(8,
-                new Label("All equipment units"),
-                allUnits,
+                new Label("Available quantity per material — expand a row to see its units"),
+                stock,
                 repaired,
                 new HBox(8, new Label("Material"), material, new Label("Serial number"), serialNo, add));
         inventoryTab.setPadding(new Insets(12));
-        VBox.setVgrow(allUnits, Priority.ALWAYS);
+        VBox.setVgrow(stock, Priority.ALWAYS);
 
         Tab requestsTabPage = new Tab("Requests", requestTab);
         Tab inventoryTabPage = new Tab("Inventory", inventoryTab);
@@ -234,6 +251,46 @@ public class AdminView extends VBox {
 
     // StudentView এর মতোই: লাল মানে সমস্যা, সবুজ মানে কাজ হয়েছে। রং একমাত্র সংকেত নয়,
     // লেখাটাই বলে দেয় কী হয়েছে।
+    // দুই রকম সারির জন্য দুইটা আলাদা ফাংশন — কলাম নিজেই বেছে নেয় কোনটা চালাবে।
+    private void treeCol(String title, double width,
+                         Function<Material, String> ofMaterial, Function<EquipmentUnit, String> ofUnit) {
+        TreeTableColumn<Object, String> c = new TreeTableColumn<>(title);
+        c.setPrefWidth(width);
+        c.setCellValueFactory(row -> {
+            Object v = row.getValue().getValue();
+            return new SimpleStringProperty(v instanceof Material m ? ofMaterial.apply(m)
+                    : ofUnit.apply((EquipmentUnit) v));
+        });
+        stock.getColumns().add(c);
+    }
+
+    // প্রতিটা material এর নিচে তার ইউনিটগুলো বসে। খোলা সারি আর বাছাই করা
+    // ইউনিট ধরে রাখা হয়, নাহলে প্রতিবার refresh এ গাছ বন্ধ হয়ে যেত।
+    private void loadStockTree(List<Material> materials, List<EquipmentUnit> units) {
+        Set<Integer> expanded = new HashSet<>();
+        for (TreeItem<Object> row : stock.getRoot().getChildren()) {
+            if (row.isExpanded()) expanded.add(((Material) row.getValue()).getId());
+        }
+        TreeItem<Object> selected = stock.getSelectionModel().getSelectedItem();
+        int selectedUnit = selected != null && selected.getValue() instanceof EquipmentUnit u ? u.getId() : -1;
+
+        stock.getRoot().getChildren().clear();
+        for (Material m : materials) {
+            TreeItem<Object> parent = new TreeItem<>(m);
+            parent.setExpanded(expanded.contains(m.getId()));
+            for (EquipmentUnit u : units) {
+                if (u.getMaterialId() == m.getId()) parent.getChildren().add(new TreeItem<>(u));
+            }
+            stock.getRoot().getChildren().add(parent);
+            if (selectedUnit < 0) continue;
+            for (TreeItem<Object> child : parent.getChildren()) {
+                if (((EquipmentUnit) child.getValue()).getId() == selectedUnit) {
+                    stock.getSelectionModel().select(child);
+                }
+            }
+        }
+    }
+
     private void error(String text) {
         message.setStyle("-fx-text-fill: red;");
         message.setText(text);
@@ -250,8 +307,9 @@ public class AdminView extends VBox {
         BookingRequest selected = requests.getSelectionModel().getSelectedItem();
         try {
             requests.getItems().setAll(bookings.listByStatus(status.getValue()));
-            allUnits.getItems().setAll(inventory.listUnits());
-            material.getItems().setAll(inventory.listMaterials(null));
+            List<Material> materials = inventory.listMaterials(null);
+            loadStockTree(materials, inventory.listUnits());
+            material.getItems().setAll(materials);
         } catch (SQLException ex) {
             error("Database error: " + ex.getMessage());
             return;
