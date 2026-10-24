@@ -77,3 +77,33 @@ The application uses Java and JavaFX for its desktop interface and MySQL or Mari
 **Project Scope**
 
 This first version covers the basic equipment borrowing process: selecting materials, submitting requests, reviewing requests, issuing equipment, and recording returns and penalties.
+
+**Setup and Run**
+
+Prerequisites: JDK 21 or newer, Maven 3.9+, and MySQL or MariaDB.
+
+Copy the example configuration and fill in your own database credentials. The real `db.properties` is not committed.
+
+```
+copy src\main\resources\db.properties.example src\main\resources\db.properties
+```
+
+Build the project:
+
+```
+mvn clean compile
+```
+
+Run the application:
+
+```
+mvn javafx:run
+```
+
+Run the tests:
+
+```
+mvn test
+```
+
+The database schema, sample data, and demo login accounts are not available yet.
