@@ -2,6 +2,7 @@ package com.labbooking;
 
 import com.labbooking.model.User;
 import com.labbooking.ui.LoginView;
+import com.labbooking.ui.StudentView;
 
 import javafx.application.Application;
 import javafx.geometry.Insets;
@@ -49,15 +50,14 @@ public class Main extends Application {
         show(new LoginView());
     }
 
-    // অস্থায়ী হোম স্ক্রিন — Phase 5 এ student আর Phase 6 এ admin এর আসল স্ক্রিন এর জায়গায় বসবে।
+    // ছাত্রের স্ক্রিন তৈরি; অ্যাডমিনের আসল স্ক্রিন Phase 6 এ এই প্লেসহোল্ডারের জায়গায় বসবে।
     private static Parent home(User user) {
+        if (!user.isAdmin()) return new StudentView();
         Button logout = new Button("Logout");
         logout.setOnAction(e -> logout());
         VBox box = new VBox(12,
                 new Label(user.getFullName() + "  (" + user.getRole() + ")"),
-                new Label(user.isAdmin()
-                        ? "Admin screens: pending requests, issue, return, inventory (Phase 6)."
-                        : "Student screens: browse, request cart, my bookings (Phase 5)."),
+                new Label("Admin screens: pending requests, issue, return, inventory (Phase 6)."),
                 logout);
         box.setPadding(new Insets(24));
         return box;

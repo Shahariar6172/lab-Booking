@@ -20,6 +20,21 @@ import java.util.Set;
 // রিকোয়েস্টের পুরো জীবনচক্র: submit → approve/reject → issue → return।
 public class BookingDao {
 
+    // একই material আবার যোগ করলে নতুন লাইন নয়, আগের লাইনের quantity বাড়ে।
+    // নিয়মটা UI তে নয় এখানে, কারণ JavaFX চালু না করেই এটা টেস্ট করা যায়।
+    // BookingItem immutable, তাই লাইন বদলানো মানে নতুন লাইন বসিয়ে দেওয়া।
+    public static void addToCart(List<BookingItem> cart, Material material, int quantity) {
+        for (int i = 0; i < cart.size(); i++) {
+            BookingItem line = cart.get(i);
+            if (line.getMaterialId() == material.getId()) {
+                cart.set(i, new BookingItem(0, 0, material.getId(), line.getMaterialName(),
+                        line.getQuantity() + quantity, "PENDING"));
+                return;
+            }
+        }
+        cart.add(new BookingItem(0, 0, material.getId(), material.toString(), quantity, "PENDING"));
+    }
+
     // কার্টের এক লাইন BookingItem দিয়েই বোঝানো হচ্ছে (id/request_id তখন 0),
     // যাতে কার্টের জন্য আলাদা ক্লাস না লাগে আর এরর মেসেজে জিনিসের নামও পাওয়া যায়।
     public String submit(int studentId, String purpose, LocalDate returnDate, List<BookingItem> cart)
