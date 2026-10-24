@@ -23,6 +23,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.sql.SQLException;
@@ -134,14 +135,20 @@ public class StudentView extends VBox {
         header.setPadding(new Insets(12, 12, 0, 12));
 
         setSpacing(8);
-        getChildren().addAll(header, tabs, message);
+        // message হেডারের নিচে, tabs এর উপরে। সবার শেষে রাখলে দেখাই যেত না:
+        // ট্যাবের ভেতরের কনটেন্ট (দুইটা টেবিল + ফিল্ড + বাটন) 600px উইন্ডোর চেয়ে
+        // লম্বা, আর tabs এ Priority.ALWAYS — তাই শেষ child টা নিচের কিনারার বাইরে
+        // পড়ে যেত। স্টক কম পড়ার মেসেজ সেট হতো, কিন্তু পর্দায় আসত না।
+        getChildren().addAll(header, message, tabs);
         VBox.setVgrow(tabs, Priority.ALWAYS);
-        VBox.setMargin(message, new Insets(0, 12, 12, 12));
+        // USE_PREF_SIZE = জায়গা কম পড়লেও VBox এটাকে চেপে শূন্য উচ্চতা করতে পারবে না।
+        message.setMinHeight(Region.USE_PREF_SIZE);
+        VBox.setMargin(message, new Insets(0, 12, 0, 12));
 
         try {
             subject.getItems().setAll(inventory.listSubjects());
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
         loadStock(null, true);
     }
@@ -159,28 +166,46 @@ public class StudentView extends VBox {
 
     // subjectFilter null দিলে পুরো ল্যাবের স্টক।
     private void loadStock(String subjectFilter, boolean keepCart) {
-        if (!keepCart) cart.clear();
-        message.setText("");
+        // সাবজেক্ট বদলানো মানে নতুন কাজ — কার্টের সাথে পুরোনো মেসেজও মুছে যায়।
+        // keepCart=true তে মেসেজ মোছা হয় না: সাবমিটের পর স্টক আবার পড়তে গিয়ে
+        // এইমাত্র দেখানো এরর/সফল লেখাটাই মুছে যেত, ছাত্র কিছুই বুঝত না।
+        if (!keepCart) {
+            cart.clear();
+            message.setText("");
+        }
         try {
             stock.getItems().setAll(inventory.listMaterials(subjectFilter));
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
+    }
+
+    // এক জায়গায় রং ঠিক করা: লাল মানে সমস্যা, সবুজ মানে কাজ হয়েছে।
+    // শুধু কালো লেখা বাকি Label গুলোর মধ্যে চোখেই পড়ে না। রং একমাত্র সংকেত নয় —
+    // লেখাটাই নিজে বলে দেয় কী হয়েছে, তাই রং আলাদা করতে না পারলেও বোঝা যায়।
+    private void error(String text) {
+        message.setStyle("-fx-text-fill: red;");
+        message.setText(text);
+    }
+
+    private void info(String text) {
+        message.setStyle("-fx-text-fill: green;");
+        message.setText(text);
     }
 
     private void add() {
         Material selected = stock.getSelectionModel().getSelectedItem();
         if (selected == null) {
-            message.setText("Select a material from the table first");
+            error("Select a material from the table first");
             return;
         }
         // একটাও খালি নেই মানে চাওয়ার কিছু নেই — সাবমিট পর্যন্ত অপেক্ষা করার দরকার কী।
         if (selected.getAvailableCount() == 0) {
-            message.setText(selected + " has 0 available and cannot be added");
+            error(selected + " has 0 available and cannot be added");
             return;
         }
         BookingDao.addToCart(cart, selected, quantity.getValue());
-        message.setText("");
+        info(selected + " x" + quantity.getValue() + " added to the request list");
     }
 
     private void submit() {
@@ -190,16 +215,17 @@ public class StudentView extends VBox {
             cart.clear();
             purpose.clear();
             returnDate.setValue(null);
-            message.setText("Request " + code + " submitted. Check My bookings for its status.");
             // সাবমিটের পর ইউনিটগুলো BOOKED, তাই দেখানো সংখ্যাও বদলাবে।
+            // মেসেজ সবার শেষে — তালিকা পড়ার কাজ আগে সেরে নেওয়া হয়।
             loadStock(subject.getValue(), true);
+            info("Request " + code + " submitted. Check My bookings for its status.");
         } catch (IllegalArgumentException | IllegalStateException ex) {
             // স্টক কম পড়লে DAO পুরোটা রোলব্যাক করে, তাই কার্ট অছোঁয়া রেখে দেওয়া হয় —
             // ছাত্র সংখ্যা কমিয়ে আবার চেষ্টা করতে পারে।
-            message.setText(ex.getMessage());
             loadStock(subject.getValue(), true);
+            error(ex.getMessage());
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
     }
 
@@ -207,7 +233,7 @@ public class StudentView extends VBox {
         try {
             myRequests.getItems().setAll(bookings.listByStudent(Main.currentUser.getId()));
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
     }
 
@@ -217,7 +243,7 @@ public class StudentView extends VBox {
         try {
             myItems.getItems().setAll(bookings.listItems(request.getId()));
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
     }
 }

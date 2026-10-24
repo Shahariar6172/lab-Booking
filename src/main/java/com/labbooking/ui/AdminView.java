@@ -19,6 +19,7 @@ import javafx.scene.control.TableView;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
+import javafx.scene.layout.Region;
 import javafx.scene.layout.VBox;
 
 import java.sql.SQLException;
@@ -129,7 +130,7 @@ public class AdminView extends VBox {
         add.setOnAction(e -> {
             Material m = material.getValue();
             if (m == null) {
-                message.setText("Choose a material first");
+                error("Choose a material first");
                 return;
             }
             // একই সিরিয়াল আগে থাকলে DAO পড়ার মতো মেসেজ দিয়ে ঠেকায়।
@@ -143,7 +144,7 @@ public class AdminView extends VBox {
         repaired.setOnAction(e -> {
             EquipmentUnit u = allUnits.getSelectionModel().getSelectedItem();
             if (u == null || !u.getStatus().equals("DAMAGED")) {
-                message.setText("Select a DAMAGED unit to mark it repaired");
+                error("Select a DAMAGED unit to mark it repaired");
                 return;
             }
             act("Unit " + u.getSerialNo() + " is available again",
@@ -171,9 +172,12 @@ public class AdminView extends VBox {
         header.setPadding(new Insets(12, 12, 0, 12));
 
         setSpacing(8);
-        getChildren().addAll(header, tabs, message);
+        // StudentView এর মতোই: message সবার শেষে থাকলে লম্বা ট্যাব-কনটেন্টের চাপে
+        // উইন্ডোর নিচের কিনারার বাইরে পড়ে যায়, তাই হেডারের ঠিক নিচে।
+        getChildren().addAll(header, message, tabs);
         VBox.setVgrow(tabs, Priority.ALWAYS);
-        VBox.setMargin(message, new Insets(0, 12, 12, 12));
+        message.setMinHeight(Region.USE_PREF_SIZE);
+        VBox.setMargin(message, new Insets(0, 12, 0, 12));
 
         refresh();
     }
@@ -184,7 +188,7 @@ public class AdminView extends VBox {
         if (r == null) return;
         BookingItem item = items.getSelectionModel().getSelectedItem();
         if (item == null) {
-            message.setText("Select an item line first");
+            error("Select an item line first");
             return;
         }
         act((approve ? "Approved " : "Rejected ") + item.getMaterialName(),
@@ -203,11 +207,11 @@ public class AdminView extends VBox {
     private BookingRequest selectedRequest(String needStatus) {
         BookingRequest r = requests.getSelectionModel().getSelectedItem();
         if (r == null) {
-            message.setText("Select a request first");
+            error("Select a request first");
             return null;
         }
         if (!r.getStatus().equals(needStatus)) {
-            message.setText("That request is " + r.getStatus() + "; this action needs " + needStatus);
+            error("That request is " + r.getStatus() + "; this action needs " + needStatus);
             return null;
         }
         return r;
@@ -217,13 +221,27 @@ public class AdminView extends VBox {
     private void act(String okMessage, Action action) {
         try {
             action.run();
-            message.setText(okMessage);
             refresh();
+            info(okMessage);
         } catch (IllegalArgumentException | IllegalStateException ex) {
-            message.setText(ex.getMessage());
+            // ভুল ডাটার মেসেজ DAO থেকেই আসে (ফাঁকা সিরিয়াল, ডুপ্লিকেট সিরিয়াল ইত্যাদি),
+            // তাই নিয়ম দুইবার লেখা হয় না — শুধু লাল করে দেখানো হয়।
+            error(ex.getMessage());
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
+    }
+
+    // StudentView এর মতোই: লাল মানে সমস্যা, সবুজ মানে কাজ হয়েছে। রং একমাত্র সংকেত নয়,
+    // লেখাটাই বলে দেয় কী হয়েছে।
+    private void error(String text) {
+        message.setStyle("-fx-text-fill: red;");
+        message.setText(text);
+    }
+
+    private void info(String text) {
+        message.setStyle("-fx-text-fill: green;");
+        message.setText(text);
     }
 
     // একটা কাজের পর রিকোয়েস্টের স্ট্যাটাস আর ইউনিটের অবস্থা দুটোই বদলায়,
@@ -235,7 +253,7 @@ public class AdminView extends VBox {
             allUnits.getItems().setAll(inventory.listUnits());
             material.getItems().setAll(inventory.listMaterials(null));
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
             return;
         }
         // আগের রিকোয়েস্ট এখনো তালিকায় থাকলে আবার বেছে দেওয়া হয়, নাহলে
@@ -257,7 +275,7 @@ public class AdminView extends VBox {
             items.getItems().setAll(bookings.listItems(request.getId()));
             heldUnits.getItems().setAll(bookings.listUnitsForRequest(request.getId()));
         } catch (SQLException ex) {
-            message.setText("Database error: " + ex.getMessage());
+            error("Database error: " + ex.getMessage());
         }
     }
 }
