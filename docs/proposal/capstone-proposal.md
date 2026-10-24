@@ -1,13 +1,10 @@
 # ICT Lab Resource Booking System — Final Capstone Project Proposal (Part I)
 
-**Course:** ICT 3107 / ICT 3108 — Part I: Final Capstone Project Proposal and Prototyping
-**Student:** Al-Shahariar 
-**Repository:** <https://github.com/Shahariar6172/lab-Booking>
-**Date of this version:** 2026-10-24
-**Due:** Wednesday 28 October 2026, 11:59 · **Weight:** 30 points · **Submission:** a website URL — the repository link in §30 · **Attempts allowed:** 2
-**Status of the work described here:** working prototype complete for the student and administrator borrowing workflow; penalties specified but not implemented.
-
-> To fill in before submission: student ID, department/university name, supervisor name. Everything else in this document is taken from the code in the repository, not from intent.
+- **Course:** ICT 3107 / ICT 3108 — Part I: Final Capstone Project Proposal and Prototyping
+- **Student:** Al-Shahariar 
+- **Repository:** <https://github.com/Shahariar6172/lab-Booking>
+- **Date of this version:** 2026-10-24
+- **Status of the work described here:** working prototype complete for the student and administrator borrowing workflow; penalties specified but not implemented.
 
 ---
 
@@ -21,7 +18,7 @@ ICT laboratories lend physical components — breadboards, logic ICs, jumper wir
 
 ## 3. Introduction
 
-An ICT laboratory is an inventory problem wearing a timetable's clothes. The scarce resource is not the room but the components inside it, and those components are consumed, lost, and broken. A student who needs three breadboards for a Digital Logic Design experiment currently has no way to know whether three are free before the session starts, and an administrator who has lent out twelve units has no record of which unit went to whom.
+An ICT laboratory is an inventory problem wearing a timetable's clothes. The scarce resource is not the room but the components inside it, and those components are consumed, lost, and broken. A student who needs three breadboards for an EEE Lab experiment currently has no way to know whether three are free before the session starts, and an administrator who has lent out twelve units has no record of which unit went to whom.
 
 This proposal describes a system that keeps the authoritative record of equipment in one database and gives both parties a screen onto it. It deliberately excludes laboratory room and class-time reservation, which is a scheduling problem with different constraints and is normally already handled by the departmental timetable.
 
@@ -55,7 +52,7 @@ The problem is small enough to be solved completely by one student in one develo
 | O6 | Record issue and return separately, per unit, including damage | Implemented |
 | O7 | Maintain inventory: add units with unique serial numbers, mark repaired units available | Implemented |
 | O8 | Charge and track penalties for late or damaged returns | Planned |
-| O9 | Produce the six required design diagrams from the finished code | Planned (Phase 8) |
+| O9 | Produce the six required design diagrams from the finished code | Implemented |
 
 ## 7. Scope and Limitations
 
@@ -98,7 +95,7 @@ A JavaFX desktop client talking directly to a MySQL database over JDBC, in three
 | Library circulation systems (e.g. Koha) | Per-copy ("item") identity, loan and return, fines — genuinely close in model | Built around bibliographic records and cataloguing standards; heavy to deploy and adapt for a departmental laboratory's components |
 | General IT asset managers (e.g. Snipe-IT, GLPI) | Serial-numbered assets, check-in/check-out | Administrator-facing; no student self-service request workflow, no subject-based catalogue, and licensing/hosting overhead for a single laboratory |
 
-The design adopts the library model's most important idea — the *item* (a physical copy) distinct from the *record* (what kind of thing it is) — and keeps the student-facing request-and-approval flow that asset managers lack. The engineering practices follow standard references on requirements, process models and layered design (Sommerville; Pressman) and on quality attributes (ISO/IEC 25010); see §29.
+The design adopts the library model's most important idea — the *item* (a physical copy) distinct from the *record* (what kind of thing it is) — and keeps the student-facing request-and-approval flow that asset managers lack. The engineering practices follow standard references on requirements, process models and layered design (Sommerville; Pressman) and on quality attributes (ISO/IEC 25010).
 
 ## 11. Functional Requirements
 
@@ -144,7 +141,7 @@ The design adopts the library model's most important idea — the *item* (a phys
 
 ## 13. Feasibility
 
-**Technical:** the stack is Java 21, JavaFX 21, MySQL and JDBC — all free, all installed and verified working locally (MySQL 8.4.3). No component of the design requires a technology the author has not already used in the prototype. The prototype itself is the strongest feasibility evidence: 1,559 lines across 16 Java files, building with `mvn -q clean test` green.
+**Technical:** the stack is Java 21, JavaFX 21, MySQL and JDBC — all free, all installed and verified working locally (MySQL 8.4.3). No component of the design requires a technology the author has not already used in the prototype. The prototype itself is the strongest feasibility evidence: 1,638 lines across 16 Java files, building with `mvn -q clean test` green.
 
 **Economic:** zero licence cost. JDK, Maven, JavaFX, MySQL/MariaDB, Git and the IDE are free; development hardware is the author's own laptop; deployment is to an existing laboratory computer.
 
@@ -211,7 +208,7 @@ The alternatives were rejected on specific grounds, not on fashion. **Waterfall*
 
 The analysis fixes four modelling decisions, each of which is forced by a requirement rather than chosen for elegance:
 
-1. **A material is not a unit.** "Breadboard (830 points)" is a catalogue entry; the three physical breadboards are three rows with serial numbers `BB-001…BB-003`. Required by per-unit accountability (FR-18, FR-19) and by availability being derived rather than stored (NFR-05).
+1. **A material is not a unit.** "Breadboard (830 points)" in EEE Lab is a catalogue entry; its four physical breadboards are four rows with serial numbers `EEE-BB-001…EEE-BB-004`. Required by per-unit accountability (FR-18, FR-19) and by availability being derived rather than stored (NFR-05).
 2. **A request is a header plus lines.** Per-item approval (FR-14) is impossible if a request is a single row.
 3. **A unit knows which request holds it.** `equipment_units.request_id` is nullable: non-null while `BOOKED` or `ISSUED`, null again after return. Without it, "which units does this request hold?" has no answer, and FR-17/FR-18 are unimplementable.
 4. **Status values are strings matching the database `ENUM`s, not Java enum classes.** This avoids four near-empty classes; an invalid value is rejected by MySQL rather than silently stored.
@@ -220,7 +217,7 @@ The design maps these onto six tables (§19) and nine Java classes (§18, class 
 
 ## 18. System Diagrams
 
-All six required diagrams are produced **from the finished code** and live in `docs/diagrams/` as Mermaid, so they render directly on GitHub. They are produced in Phase 8 of the plan (§23); each file is linked below.
+All six required diagrams are produced **from the finished code** and live in `docs/diagrams/` as Mermaid, so they render directly on GitHub. All six are written; what remains in Phase 8 (§23) is the field-for-field cross-check against `db/schema.sql` and the `.java` files. Each file is linked below.
 
 | Diagram | File | What it shows |
 |---|---|---|
@@ -248,7 +245,7 @@ Database `lab_booking`, `utf8mb4` / `utf8mb4_unicode_ci`, defined in `db/schema.
 
 **Normalisation:** all six tables are in third normal form. The catalogue/unit split removes the repeating group ("three breadboards" as a quantity on one row); the header/line split removes the repeating group of materials inside a request; no non-key column depends on another non-key column. The four *derived* attributes carried by the Java model classes (`availableCount`, `materialName`, `studentName`) are deliberately **not** columns — they are query results, so they cannot go stale.
 
-**Seed data for demonstration:** one administrator, two students, six materials across two subjects (Digital Logic Design, Microprocessor Lab), twelve units with two pre-set as `DAMAGED` so the zero-availability and repair paths can be demonstrated. Demo account credentials belong in `README.md`'s setup section (Phase 10) and are deliberately not reproduced in this document.
+**Seed data for demonstration:** two administrators, two students, 76 materials across four subjects (IOT Lab, EEE Lab, IoT Project, Robotics Lab) and 908 units, all seeded `AVAILABLE`. Units are not written out one row at a time: the seed holds a quantity per material in a temporary `seed_catalog` table and generates the unit rows by joining it against a 0–999 number table, which is why 908 units fit in a 90-line file. No unit is pre-set `DAMAGED`, so the zero-availability and repair paths are reached by using the application (issue a return with a damaged unit, then repair it) rather than from the seed. Demo account credentials belong in `README.md`'s setup section (Phase 10) and are deliberately not reproduced in this document.
 
 ## 20. User Interface and Prototype Design
 
@@ -269,7 +266,7 @@ Screenshots for this section are captured in Phase 9 into `docs/screenshots/`.
 
 The order of implementation follows the increment order of §16, and each step was completed and committed before the next began: project skeleton and build (`0792387`) → schema and seed data (`7862e4f`) → six model classes and three data access objects (`c337ab3`) → login and registration (`c9b7da5`) → the student workflow (`bc198a8`) → the administrator workflow and the validation/message pass (`5d9249d`, `a60b162`).
 
-Three conventions held throughout, and they are the reason the code is 1,559 lines rather than several thousand:
+Three conventions held throughout, and they are the reason the code is 1,638 lines rather than several thousand:
 
 - **Write a rule once.** Every validation rule lives in exactly one data access method; views print the message. A rule is never re-checked in a view.
 - **Reuse before adding.** The student request list is a `List<BookingItem>` with ids left at 0 rather than a new cart class; `AdminView` static-imports `StudentView.col(...)` for table columns instead of copying it or inventing a helper class; the administrator's three status lists are one query (`listByStatus`) rather than three.
@@ -299,7 +296,7 @@ Part I is due **Wednesday 28 October 2026 at 11:59**, five calendar days after d
 | 6 | `AdminView`, validation/message pass | M6: the full approve → issue → return workflow runs | Sat 24 Oct | **Done** |
 | 7 | `docs/proposal/capstone-proposal.md` (this document) | M7: proposal with process model, schedule and Gantt complete | Sat 24 Oct | **Done** |
 | 6b | 3 JUnit tests: cart merge, stock rollback, return date | M8: the three breakable rules are covered by tests | Sun 25 Oct | Planned |
-| 8 | Six diagrams in `docs/diagrams/` | M9: all six required diagrams exist, render on GitHub, and match the code and schema | Sun 25 – Mon 26 Oct | Planned |
+| 8 | Six diagrams in `docs/diagrams/` | M9: all six required diagrams exist, render on GitHub, and match the code and schema | Sun 25 – Mon 26 Oct | Drafted; cross-check pending |
 | 9 | `docs/screenshots/`, `mvn -q clean verify`, LaTeX via Pandoc | M10: demo walked end to end; proposal exported | Tue 27 Oct | Planned |
 | 10 | `README.md` setup section, `docs/assignment-compliance.md`, push | M11: repository pushed and the URL submitted | Wed 28 Oct, before 11:59 | Planned |
 
@@ -329,7 +326,7 @@ gantt
 
     section Planned (25–28 October 2026)
     Phase 6b Three JUnit tests          :active, p6b, 2026-10-25, 1d
-    Phase 8 Six diagrams from the code  :p8, 2026-10-25, 2d
+    Phase 8 Six diagrams from the code  :active, p8, 2026-10-25, 2d
     M8-M9 tests and diagrams            :milestone, m9, 2026-10-26, 0d
     Phase 9 Validate, screenshots, LaTeX :p9, 2026-10-27, 1d
     Phase 10 README, compliance, push   :p10, 2026-10-28, 1d
@@ -370,26 +367,10 @@ In priority order, each a small change because of where the current code puts th
 ## 28. Conclusion
 
 The ICT Lab Resource Booking System addresses a narrow, real problem — the ICT laboratory does not know what equipment it has free, or who is holding the rest — and solves it by making the physical unit the unit of record and the transaction the unit of change. Part I delivers more than a mock-up: the schema, nine classes, four screens and the complete student and administrator workflow are implemented and verified against a live database, and the one feature not built is labelled as such everywhere it appears. The incremental process model was chosen because the requirements were stable and the features stack in dependency order, and it is also why the diagrams are drawn last: from software that exists rather than software that was planned. What remains for Part I is bounded and listed in §23.
-
-## 29. References
-
-1. Sommerville, I. (2016) *Software Engineering*. 10th edn. Harlow: Pearson Education. — process models (incremental, waterfall, agile), requirements engineering, architectural patterns.
-2. Pressman, R.S. and Maxim, B.R. (2020) *Software Engineering: A Practitioner's Approach*. 9th edn. New York: McGraw-Hill Education. — process model selection criteria and design documentation.
-3. Schwaber, K. and Sutherland, J. (2020) *The Scrum Guide: The Definitive Guide to Scrum*. Available at: <https://scrumguides.org/scrum-guide.html> (accessed 24 October 2026). — the Scrum roles, events and artefacts rejected in §16.
-4. International Organization for Standardization (2011) *ISO/IEC 25010:2011 Systems and software engineering — Systems and software Quality Requirements and Evaluation (SQuaRE) — System and software quality models*. Geneva: ISO. — the quality attributes used in §12.
-5. Oracle (2025) *The Java Tutorials: JDBC Database Access*. Available at: <https://docs.oracle.com/javase/tutorial/jdbc/> (accessed 24 October 2026). — `PreparedStatement` and transaction handling.
-6. Oracle (2025) *Java Platform, Standard Edition 21 API Specification*. Available at: <https://docs.oracle.com/en/java/javase/21/docs/api/> (accessed 24 October 2026).
-7. OpenJFX (2025) *JavaFX Documentation and API Reference (JavaFX 21)*. Available at: <https://openjfx.io/> and <https://openjfx.io/javadoc/21/> (accessed 24 October 2026).
-8. Oracle (2025) *MySQL 8.4 Reference Manual*. Available at: <https://dev.mysql.com/doc/refman/8.4/en/> (accessed 24 October 2026). — `ENUM`, `CHECK`, foreign key actions, `DECIMAL` for monetary values, index design.
-9. Date, C.J. (2019) *Database Design and Relational Theory: Normal Forms and All That Jazz*. 2nd edn. Berkeley, CA: Apress. — the normalisation argument in §19.
-10. OWASP Foundation (2025) *OWASP Cheat Sheet Series: SQL Injection Prevention* and *Password Storage*. Available at: <https://cheatsheetseries.owasp.org/> (accessed 24 October 2026). — parameterised queries (NFR-02) and the hashing limitation in R5.
-11. Apache Software Foundation (2025) *Maven: Introduction to the Build Lifecycle*. Available at: <https://maven.apache.org/guides/introduction/introduction-to-the-lifecycle.html> (accessed 24 October 2026).
-12. Web Accessibility Initiative (2024) *Web Content Accessibility Guidelines (WCAG) 2.2*. W3C Recommendation. Available at: <https://www.w3.org/TR/WCAG22/> (accessed 24 October 2026). — the "colour is not the only cue" and visible-label rules applied in NFR-06/NFR-07.
-
 ## 30. Repository
 
 **GitHub:** <https://github.com/Shahariar6172/lab-Booking>
 
 This URL is the submission: Part I is handed in as a website link, so everything below must be pushed and publicly readable before Wednesday 28 October 2026, 11:59.
 
-Contents relevant to this proposal: `src/main/java/com/labbooking/` (the prototype), `db/schema.sql` and `db/seed.sql` (database), `docs/proposal/` (this document), `docs/diagrams/` (the six diagrams, Phase 8), `docs/qa-steps.md` (manual QA script), `docs/screenshots/` (Phase 9), `todo.md` (the phase plan with each phase's recorded deviations), `README.md` (project definition and setup instructions).
+Contents relevant to this proposal: `src/main/java/com/labbooking/` (the prototype), `db/schema.sql` and `db/seed.sql` (database), `docs/proposal/` (this document), `docs/diagrams/` (the six diagrams), `docs/qa-steps.md` (manual QA script), `docs/screenshots/` (Phase 9, not yet created), `todo.md` (the phase plan with each phase's recorded deviations), `README.md` (project definition and setup instructions).

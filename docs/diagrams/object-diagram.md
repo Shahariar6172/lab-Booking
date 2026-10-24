@@ -22,7 +22,7 @@ classDiagram
         requestCode = REQ-261024143015
         studentId = 2
         studentName = Al-Shahariar 
-        purpose = Digital Logic Design lab experiment 4
+        purpose = EEE Lab experiment 4
         returnDate = 2026-10-31
         status = APPROVED
         createdAt = 2026-10-24 14.30
@@ -32,7 +32,7 @@ classDiagram
         <<BookingItem>>
         id = 11
         requestId = 7
-        materialId = 1
+        materialId = 64
         materialName = Breadboard
         quantity = 2
         status = APPROVED
@@ -42,76 +42,78 @@ classDiagram
         <<BookingItem>>
         id = 12
         requestId = 7
-        materialId = 2
-        materialName = Logic IC
+        materialId = 66
+        materialName = Sensor
         quantity = 1
         status = APPROVED
     }
 
     class breadboard {
         <<Material>>
-        id = 1
-        subject = Digital Logic Design
+        id = 64
+        subject = EEE Lab
         name = Breadboard
         variant = 830 points
-        availableCount = 0
+        availableCount = 2
     }
 
-    class logicIc {
+    class dht11 {
         <<Material>>
-        id = 2
-        subject = Digital Logic Design
-        name = Logic IC
-        variant = 7400 NAND
-        availableCount = 1
+        id = 66
+        subject = EEE Lab
+        name = Sensor
+        variant = DHT11
+        availableCount = 2
     }
 
     class bb001 {
         <<EquipmentUnit>>
         id = 1
-        materialId = 1
+        materialId = 64
         materialName = Breadboard
-        serialNo = BB-001
+        serialNo = EEE-BB-001
         status = BOOKED
     }
 
     class bb002 {
         <<EquipmentUnit>>
         id = 2
-        materialId = 1
+        materialId = 64
         materialName = Breadboard
-        serialNo = BB-002
+        serialNo = EEE-BB-002
         status = BOOKED
     }
 
-    class ic7400a {
+    class dht001 {
         <<EquipmentUnit>>
-        id = 4
-        materialId = 2
-        materialName = Logic IC
-        serialNo = IC-7400-A
+        id = 9
+        materialId = 66
+        materialName = Sensor
+        serialNo = EEE-DHT-001
         status = BOOKED
     }
 
     shahariar --> req7 : studentId = 2
     req7 --> line1 : requestId = 7
     req7 --> line2 : requestId = 7
-    breadboard --> line1 : materialId = 1
-    logicIc --> line2 : materialId = 2
-    breadboard --> bb001 : materialId = 1
-    breadboard --> bb002 : materialId = 1
-    logicIc --> ic7400a : materialId = 2
+    breadboard --> line1 : materialId = 64
+    dht11 --> line2 : materialId = 66
+    breadboard --> bb001 : materialId = 64
+    breadboard --> bb002 : materialId = 64
+    dht11 --> dht001 : materialId = 66
     req7 --> bb001 : request_id = 7
     req7 --> bb002 : request_id = 7
-    req7 --> ic7400a : request_id = 7
+    req7 --> dht001 : request_id = 7
 ```
 
 **Why this snapshot is internally consistent**
 
 - Two item lines, quantities 2 and 1 → exactly three units are held, which is what `BookingDao.submit` books.
-- `breadboard.availableCount = 0`: the seed has three breadboards, BB-001 and BB-002 are `BOOKED` by this request and BB-003 is `DAMAGED`.
-- `logicIc.availableCount = 1`: of IC-7400-A and IC-7400-B, only IC-7400-A is held here.
+- `breadboard.availableCount = 2`: the seed gives EEE Lab four breadboards; `EEE-BB-001` and `EEE-BB-002` are `BOOKED` by this request, leaving `EEE-BB-003` and `EEE-BB-004` available.
+- `dht11.availableCount = 2`: of the seed's three `EEE-DHT-*` units, only `EEE-DHT-001` is held here.
 - Both lines are `APPROVED` and no line is `PENDING`, so `syncRequestStatus` sets the request to `APPROVED` — the next legal action is *Record issue*, which turns all three units and the request to `ISSUED`.
 - The request is listed at most once per material (`UNIQUE(request_id, material_id)`), so a second breadboard request would have raised `quantity` instead of adding a third line.
+
+Material and unit ids follow the seed's insertion order: the 63 `IOT Lab` rows are inserted first, so EEE Lab's Breadboard is material 64 and its Sensor (DHT11) is material 66. The unit ids above are illustrative of that same ordering.
 
 **One honest mismatch to note:** the last three links are database state, not Java fields. `equipment_units.request_id` is a column, but the `EquipmentUnit` class has no `requestId` attribute — `BookingDao.listUnitsForRequest(7)` is what resolves that link at runtime. The link is drawn because the snapshot would be unreadable without it.

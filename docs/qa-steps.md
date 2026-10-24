@@ -21,23 +21,29 @@ Laragon এর `mysql.exe` PATH এ নেই, তাই পুরো পাথ 
 
 `schema.sql` আগে টেবিল মুছে নতুন বানায়, তারপর `seed.sql` ডেমো ডাটা ঢালে।
 
-**রিসেটের পরের স্টক** (নিচের সব প্রত্যাশিত সংখ্যা এটার উপর ভিত্তি করে):
+**রিসেটের পরের স্টক।** seed এ এখন **৪টা subject**, **৭৬টা material**, **৯০৮টা unit** —
+সবগুলোই `AVAILABLE`, **একটাও `DAMAGED` নয়**। তাই নিচের ধাপগুলো ইচ্ছে করেই
+`EEE Lab` এর কম সংখ্যার material গুলো দিয়ে করা, যাতে গোনা যায়:
 
-| Material | খালি আছে |
-|---|---|
-| Breadboard (830 points) | **2** (BB-003 DAMAGED) |
-| Logic IC (7400 NAND) | **2** |
-| Jumper Wires (Male-Male) | **1** |
-| Arduino Uno (R3) | **3** |
-| Sensor (DHT11) | **2** |
-| Sensor (HC-SR04) | **0** (US-001 DAMAGED) |
+| Subject | Material | খালি আছে |
+|---|---|---|
+| EEE Lab | Breadboard (830 points) | **4** |
+| EEE Lab | Arduino Uno (R3) | **4** |
+| EEE Lab | Sensor (DHT11) | **3** |
+| EEE Lab | Digital Multimeter | **5** |
+| EEE Lab | Soldering Iron (60W) | **5** |
 
-তিনটা অ্যাকাউন্টের পাসওয়ার্ড একই: `password123`
-আর আজকের তারিখ ধরা হয়েছে **2026-10-24**।
+> **`0 available` পরীক্ষা করার নিয়ম বদলেছে:** seed এ আর কোনো DAMAGED ইউনিট নেই,
+> তাই শূন্য স্টক **হাতে বানাতে হবে** — কোনো material এর সব ইউনিট একটা রিকোয়েস্টে
+> বুক করে ফেললেই সেটা `0 available` দেখাবে (ধাপ ১৪ এভাবেই করা)।
+
+চারটা অ্যাকাউন্টের পাসওয়ার্ড একই: `password123` — শুধু `admin@mbstu.ac.bd` এর
+পাসওয়ার্ড `admin123`। আর আজকের তারিখ ধরা হয়েছে **2026-10-24**।
 
 | অ্যাকাউন্ট | ইমেইল | role |
 |---|---|---|
 | Lab Administrator | `admin@lab.edu` | ADMIN |
+| Lab Assistant | `admin@mbstu.ac.bd` | ADMIN |
 | Al-Shahariar  | `shahariar@lab.edu` | STUDENT |
 | Nusrat Jahan | `nusrat@lab.edu` | STUDENT |
 
@@ -70,10 +76,11 @@ Laragon এর `mysql.exe` PATH এ নেই, তাই পুরো পাথ 
 ## খ. ছাত্রের স্বাভাবিক কাজ (happy path)
 
 - [ ] **৭.** স্ক্রিনে ঢোকার সময় কোনো subject বাছা থাকে না, পুরো ল্যাবের স্টক দেখায়।
-      **Expect:** ৬টা row, প্রতিটার শেষ কলামে `N available`।
+      **Expect:** ৭৬টা row, প্রতিটার শেষ কলামে `N available`।
 
-- [ ] **৮.** Subject ড্রপডাউনে `Microprocessor Lab` বাছা।
-      **Expect:** শুধু ৩টা row (Arduino Uno, Sensor DHT11, Sensor HC-SR04)।
+- [ ] **৮.** Subject ড্রপডাউনে `EEE Lab` বাছা।
+      **Expect:** শুধু ৫টা row (Breadboard, Arduino Uno, Sensor DHT11,
+      Digital Multimeter, Soldering Iron)।
 
 - [ ] **৯.** টেবিলে `Arduino Uno` বাছা, Quantity **2**, তারপর `Add to request`।
       **Expect:** সবুজ লেখায় `Arduino Uno (R3) x2 added to the request list`,
@@ -93,25 +100,29 @@ Laragon এর `mysql.exe` PATH এ নেই, তাই পুরো পাথ 
       নিচে তার ২টা আইটেম লাইন আসবে।
 
 - [ ] **১৩.** `Browse & request` ট্যাবে ফিরে `Refresh stock`।
-      **Expect:** `Arduino Uno` এখন **0 available**, `Sensor (DHT11)` **1 available** —
-      কারণ সাবমিটের সময় ইউনিটগুলো BOOKED হয়ে গেছে।
+      **Expect:** `Arduino Uno` এখন **1 available** (৪ − ৩), `Sensor (DHT11)`
+      **2 available** (৩ − ১) — কারণ সাবমিটের সময় ইউনিটগুলো BOOKED হয়ে গেছে।
 
 ---
 
 ## গ. ছাত্রের ভুল ধরার পরীক্ষা (এখানেই আসল নম্বর)
 
-- [ ] **১৪.** `Sensor` (HC-SR04) — যেটার ০টা খালি — বাছা, `Add to request`।
-      **Expect:** লাল লেখায় `Sensor (HC-SR04) has 0 available and cannot be added`,
+- [ ] **১৪.** **আগে শূন্য স্টক বানাতে হবে** (seed এ DAMAGED ইউনিট নেই)।
+      `EEE Lab` এ `Arduino Uno` এর বাকি **1** টা Quantity **1** দিয়ে Add,
+      Purpose আর ভবিষ্যতের তারিখ দিয়ে Submit → সফল। তারপর `Refresh stock`।
+      **Expect:** `Arduino Uno` এখন **0 available**।
+      এবার ওই `Arduino Uno` বাছা, `Add to request`।
+      **Expect:** লাল লেখায় `Arduino Uno (R3) has 0 available and cannot be added`,
       আর Request list এ কিছুই ঢুকবে না।
 
-- [ ] **১৫.** Subject `Digital Logic Design`, `Breadboard` (২টা খালি) বাছা,
+- [ ] **১৫.** `EEE Lab` এ `Sensor` (DHT11) — এখন **2** টা খালি — বাছা,
       Quantity **3**, Add। Purpose আর ভবিষ্যতের তারিখ দিয়ে `Submit request`।
       **Expect:** লাল লেখায়
-      `Only 2 of 3 Breadboard (830 points) are available now. Nothing was saved.`
+      `Only 2 of 3 Sensor (DHT11) are available now. Nothing was saved.`
       **একটা জিনিসও সেভ হবে না** (পুরো লেনদেন রোলব্যাক), আর Request list অছোঁয়া
       থাকবে — যাতে সংখ্যা কমিয়ে আবার চেষ্টা করা যায়।
 
-- [ ] **১৬.** এবার row মুছে `Breadboard` x**2** যোগ করে Submit।
+- [ ] **১৬.** এবার row মুছে `Sensor` (DHT11) x**2** যোগ করে Submit।
       **Expect:** সফল। (অর্থাৎ ১৫ নম্বরে সত্যিই কিছু সেভ হয়নি।)
 
 - [ ] **১৭.** কার্টে কিছু রেখে Purpose **খালি** রেখে Submit।
@@ -139,7 +150,7 @@ Laragon এর `mysql.exe` PATH এ নেই, তাই পুরো পাথ 
       **Expect:** অ্যাডমিনের স্ক্রিন, `Requests` ট্যাব,
       `Show requests with status` ড্রপডাউনে `PENDING`।
 
-- [ ] **২৩.** কাবিরের রিকোয়েস্ট বাছা।
+- [ ] **২৩.** Al-Shahariar এর রিকোয়েস্ট বাছা।
       **Expect:** নিচে `Items in the selected request` এ আইটেম লাইন, আর
       `Units held by this request` এ আটকে রাখা ইউনিটগুলো (serial সহ)।
 
@@ -164,14 +175,17 @@ Laragon এর `mysql.exe` PATH এ নেই, তাই পুরো পাথ 
       **Expect:** সব PENDING লাইন REJECTED, রিকোয়েস্ট `REJECTED`,
       আর ওই রিকোয়েস্টের আটকে রাখা সব ইউনিট আবার AVAILABLE।
 
-- [ ] **২৯.** `Inventory` ট্যাব → Material বাছা, Serial number `BB-001` দিয়ে `Add unit`।
-      **Expect:** `Serial number BB-001 already exists` — ডুপ্লিকেট serial ঢুকবে না।
+- [ ] **২৯.** `Inventory` ট্যাব → `Breadboard (830 points)` বাছা,
+      Serial number `EEE-BB-001` দিয়ে `Add unit`।
+      **Expect:** `Serial number EEE-BB-001 already exists` — ডুপ্লিকেট serial ঢুকবে না।
 
-- [ ] **৩০.** এবার serial `BB-004` দিয়ে `Add unit`।
+- [ ] **৩০.** এবার serial `EEE-BB-005` দিয়ে `Add unit`।
       **Expect:** যোগ হবে, আর Breadboard এর খালি সংখ্যা ১ বাড়বে।
 
-- [ ] **৩১.** তালিকায় `BB-003` (DAMAGED) বাছা → `Mark selected unit repaired`।
+- [ ] **৩১.** ধাপ ২৭ এ যে ইউনিটটা `DAMAGED` করা হয়েছিল সেটা তালিকায় বাছা →
+      `Mark selected unit repaired`।
       **Expect:** status `AVAILABLE`, খালি সংখ্যা আরও ১ বাড়বে।
+      (seed এ DAMAGED ইউনিট নেই, তাই ধাপ ২৭ এর বানানো ইউনিটটাই এখানে কাজে লাগে।)
 
 ---
 
