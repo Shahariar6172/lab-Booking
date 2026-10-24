@@ -53,6 +53,11 @@ public class Main extends Application {
     }
 
     public static void main(String[] args) {
+        try {
+            Database.seed();
+        } catch (Exception e) {
+            System.err.println("Could not seed the database: " + e.getMessage());
+        }
         // launch() JavaFX চালু করে, তারপর উপরের start() কল করে।
         // এই লাইনটা উইন্ডো বন্ধ না হওয়া পর্যন্ত return করে না।
         launch(args);
