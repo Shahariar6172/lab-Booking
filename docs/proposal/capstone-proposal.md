@@ -2,6 +2,7 @@
 
 - **Course:** ICT 3107 / ICT 3108 — Part I: Final Capstone Project Proposal and Prototyping
 - **Student:** Al-Shahariar 
+- **ID:** IT-24057
 - **Repository:** <https://github.com/Shahariar6172/lab-Booking>
 - **Date of this version:** 2026-10-24
 - **Status of the work described here:** working prototype complete for the student and administrator borrowing workflow; penalties specified but not implemented.
@@ -366,11 +367,10 @@ In priority order, each a small change because of where the current code puts th
 
 ## 28. Conclusion
 
-The ICT Lab Resource Booking System addresses a narrow, real problem — the ICT laboratory does not know what equipment it has free, or who is holding the rest — and solves it by making the physical unit the unit of record and the transaction the unit of change. Part I delivers more than a mock-up: the schema, nine classes, four screens and the complete student and administrator workflow are implemented and verified against a live database, and the one feature not built is labelled as such everywhere it appears. The incremental process model was chosen because the requirements were stable and the features stack in dependency order, and it is also why the diagrams are drawn last: from software that exists rather than software that was planned. What remains for Part I is bounded and listed in §23.
+The ICT Lab Resource Booking System addresses a narrow, real problem — the ICT laboratory does not know what equipment it has free, or who is holding the rest — and solves it by making the physical unit the unit of record and the transaction the unit of change. Part I delivers more than a mock-up: the schema, nine classes, four screens and the complete student and administrator workflow are implemented and verified against a live database, and the one feature not built is labelled as such everywhere it appears. The incremental process model was chosen because the requirements were stable and the features stack in dependency order, and it is also why the diagrams are drawn last: from software that exists rather than software that was planned. What remains for Part I is bounded.
 ## 30. Repository
 
 **GitHub:** <https://github.com/Shahariar6172/lab-Booking>
 
-This URL is the submission: Part I is handed in as a website link, so everything below must be pushed and publicly readable before Wednesday 28 October 2026, 11:59.
 
-Contents relevant to this proposal: `src/main/java/com/labbooking/` (the prototype), `db/schema.sql` and `db/seed.sql` (database), `docs/proposal/` (this document), `docs/diagrams/` (the six diagrams), `docs/qa-steps.md` (manual QA script), `docs/screenshots/` (Phase 9, not yet created), `todo.md` (the phase plan with each phase's recorded deviations), `README.md` (project definition and setup instructions).
+
