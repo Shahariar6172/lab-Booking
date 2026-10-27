@@ -110,4 +110,18 @@ Run the tests:
 mvn test
 ```
 
-The database schema, sample data, and demo login accounts are not available yet.
+**Database setup:** create the database and load the demo data:
+
+```
+mysql -u root -p < db/schema.sql
+mysql -u root -p lab_booking < db/seed.sql
+```
+
+**Demo accounts**:
+
+| Name | Email | Role |
+|---|---|---|
+| Lab Administrator | `admin@lab.edu` | ADMIN |
+| Al-Shahariar | `shahariar@lab.edu` | STUDENT |
+
+`admin@mbstu.ac.bd` (ADMIN).
