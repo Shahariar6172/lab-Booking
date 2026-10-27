@@ -8,6 +8,10 @@ The project focuses on borrowing laboratory equipment, such as breadboards and s
 
 The main objective is to make equipment borrowing easier to manage. The system records available equipment, student requests, issued items, returns, and penalties.
 
+**Project Proposal**
+
+[Capstone Proposal](https://github.com/Shahariar6172/lab-Booking/blob/main/docs/proposal/capstone-proposal.md)
+
 **Users**
 
 The system has two types of users:
